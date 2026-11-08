@@ -19,4 +19,12 @@
     <Using Include="NUnit.Framework" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="TestData\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\HumbleBookCatalog\HumbleBookCatalog.csproj" />
+  </ItemGroup>
+
 </Project>
