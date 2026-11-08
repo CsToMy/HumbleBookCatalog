@@ -1,6 +1,5 @@
 ﻿using HumbleBookCatalog.Import;
 using HumbleBookCatalog.Tests.TestUtils;
-using System.IO;
 using System.Linq;
 
 namespace HumbleBookCatalog.Tests;
@@ -49,21 +48,25 @@ internal sealed class HTMLParserTests
     public void ParseBookWithWhitespaceTitle(string title)
     {
         var html = $"""
-        <div class="book-item">
-            <div class="book-title">{title}</div>
-            <div class="publisher">O'Reilly</div>
+        <div class="subproducts-holder">
+            <div class="subproduct-selector">
+                <div class="text-holder">
+                    <h2>{title}</h2>
+                </div>
+            </div>
         </div>
         """;
 
         var result = HTMLParser.Parse(html);
-
         Assert.That(result, Is.Empty);
     }
 
     [TestCaseSource(typeof(InvalidHTMLGenerator))]
     public void ParseInvalidHTML(string invalidHtml)
     {
-        Assert.Throws<InvalidDataException>(() => HTMLParser.Parse(invalidHtml));
+        var result = HTMLParser.Parse(invalidHtml);
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result, Is.Empty);
     }
 
     [TestCaseSource(typeof(ValidEmptyHTMLGenerator))]
@@ -79,16 +82,18 @@ internal sealed class HTMLParserTests
     public void ParseBookWithoutPublisher()
     {
         var html = """
-        <div class="book-item">
-            <div class="book-title">
-                Fundamentals of Software Architecture
+        <div class="subproducts-holder">
+            <div class="subproduct-selector">
+                <div class="text-holder">
+                    <h2>Fundamentals of Software Architecture</h2>
+                </div>
             </div>
         </div>
         """;
 
         var result = HTMLParser.Parse(html);
 
-        Assert.That(result, Has.Length.EqualTo(1));
+        Assert.That(result, Has.Count.EqualTo(1));
         Assert.That(result[0].Title,
             Is.EqualTo("Fundamentals of Software Architecture"));
         Assert.That(result[0].Publisher, Is.Null.Or.Empty);
@@ -101,10 +106,16 @@ internal sealed class HTMLParserTests
         <div class="book-item">
             <div class="publisher">O'Reilly</div>
         </div>
+        <div class="subproducts-holder">
+            <div class="subproduct-selector">
+                <div class="text-holder">
+                    <p>O'Reilly</p>
+                </div>
+            </div>
+        </div>
         """;
 
         var result = HTMLParser.Parse(html);
-
         Assert.That(result, Is.Empty);
     }
 
@@ -112,17 +123,19 @@ internal sealed class HTMLParserTests
     public void ParseHtmlEntities()
     {
         var html = """
-        <div class="book-item">
-            <div class="book-title">
-                C# &amp; .NET Development
+        <div class="subproducts-holder">
+            <div class="subproduct-selector">
+                <div class="text-holder">
+                    <h2>C# &amp; .NET Development</h2>
+                    <p>O'Reilly</p>
+                </div>
             </div>
-            <div class="publisher">O'Reilly</div>
         </div>
         """;
 
         var result = HTMLParser.Parse(html);
 
-        Assert.That(result, Has.Length.EqualTo(1));
+        Assert.That(result, Has.Count.EqualTo(1));
         Assert.That(result[0].Title,
             Is.EqualTo("C# & .NET Development"));
         Assert.That(result[0].Publisher, Is.EqualTo("O'Reilly"));
@@ -132,73 +145,93 @@ internal sealed class HTMLParserTests
     public void ParseNestedElementsInTitle()
     {
         var html = """
-        <div class="book-item">
-            <div class="book-title">
-                <span>
-                    <strong>Fundamentals</strong>
-                    of Software Architecture
-                </span>
+        <div class="subproducts-holder">
+            <div class="subproduct-selector">
+                <div class="text-holder">
+                    <h2>
+                        <strong>Fundamentals</strong>
+                        of Software Architecture
+                    </h2>
+                    <p>O'Reilly</p>
+                </div>
             </div>
-            <div class="publisher">O'Reilly</div>
         </div>
         """;
 
         var result = HTMLParser.Parse(html);
 
-        Assert.That(result, Has.Length.EqualTo(1));
+        Assert.That(result, Has.Count.EqualTo(1));
         Assert.That(result[0].Title,
             Is.EqualTo("Fundamentals of Software Architecture"));
+        Assert.That(result[0].Publisher, Is.EqualTo("O'Reilly"));
     }
 
     [Test]
     public void ParseMultipleBooks()
     {
         var html = """
-        <div class="book-item">
-            <div class="book-title">Book One</div>
-            <div class="publisher">Publisher One</div>
-        </div>
-
-        <div class="book-item">
-            <div class="book-title">Book Two</div>
-            <div class="publisher">Publisher Two</div>
-        </div>
-
-        <div class="book-item">
-            <div class="book-title">Book Three</div>
+        <div class="subproducts-holder">
+            <div class="subproduct-selector">
+                <div class="text-holder">
+                    <h2>Clean Architecture</h2>
+                    <p>O'Reilly</p>
+                </div>
+            </div>
+        
+            <div class="subproduct-selector">
+                <div class="text-holder">
+                    <h2>Python Cookbook</h2>
+                </div>
+            </div>
+        
+            <div class="subproduct-selector">
+                <div class="text-holder">
+                    <h2>Domain-Driven Design</h2>
+                    <p>Addison-Wesley</p>
+                </div>
+            </div>
         </div>
         """;
 
         var result = HTMLParser.Parse(html);
 
-        Assert.That(result, Has.Length.EqualTo(3));
+        Assert.That(result, Has.Count.EqualTo(3));
         Assert.That(result.Select(x => x.Title),
-            Is.EqualTo(new[] { "Book One", "Book Two", "Book Three" }));
+            Is.EqualTo(new[] { "Clean Architecture", "Python Cookbook", "Domain-Driven Design" }));
     }
 
     [Test]
     public void ParseMixedValidAndInvalidBooks()
     {
         var html = """
-        <div class="book-item">
-            <div class="book-title">Valid Book</div>
-            <div class="publisher">O'Reilly</div>
-        </div>
+        <div class="subproducts-holder">
+            <div class="subproduct-selector">
+                <div class="text-holder">
+                    <h2>Clean Architecture</h2>
+                    <p>O'Reilly</p>
+                </div>
+            </div>
 
-        <div class="book-item">
-            <div class="publisher">Missing title</div>
-        </div>
+            <div class="subproduct-selector">
+                <div class="text-holder">
+                    <p>Unknown Publisher</p>
+                </div>
+            </div>
 
-        <div class="book-item">
-            <div class="book-title">Another Valid Book</div>
+            <div class="subproduct-selector">
+                <div class="text-holder">
+                    <h2>Domain-Driven Design</h2>
+                    <p>Addison-Wesley</p>
+                </div>
+            </div>
         </div>
         """;
 
         var result = HTMLParser.Parse(html);
 
-        Assert.That(result, Has.Length.EqualTo(2));
-        Assert.That(result[0].Title, Is.EqualTo("Valid Book"));
-        Assert.That(result[1].Title, Is.EqualTo("Another Valid Book"));
+        Assert.That(result, Has.Count.EqualTo(2));
+        Assert.That(result[0].Title, Is.EqualTo("Clean Architecture"));
+        Assert.That(result[1].Title, Is.EqualTo("Domain-Driven Design"));
     }
 
     [Test]
@@ -206,14 +239,27 @@ internal sealed class HTMLParserTests
     {
         var html = """
         <!--
-        <div class="book-item">
-            <div class="book-title">Fake Book</div>
+        <div class="subproducts-holder">
+            <div class="subproduct-selector">
+                <div class="text-holder">
+                    <h2>Clean Architecture</h2>
+                </div>
+            </div>
         </div>
         -->
         """;
 
         var result = HTMLParser.Parse(html);
+        Assert.That(result, Is.Empty);
+    }
 
+    [TestCase("\u200B\u200B")]
+    [TestCase("\uFEFF\uFEFF")]
+    [TestCase(" \u200B ")]
+    [TestCase("\uFEFF\u200B")]
+    public void ParseInvisibleCharactersOnly(string input)
+    {
+        var result = HTMLParser.Parse(input);
         Assert.That(result, Is.Empty);
     }
 }
