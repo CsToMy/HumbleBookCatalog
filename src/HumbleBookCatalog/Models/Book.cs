@@ -8,7 +8,6 @@ internal sealed record class Book
     [JsonPropertyName("title")]
     public required string Title { get; init; }
 
-    [JsonRequired]
     [JsonPropertyName("publisher")]
-    public required string Publisher { get; init; }
+    public string? Publisher { get; init; }
 }

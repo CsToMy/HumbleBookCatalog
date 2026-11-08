@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace HumbleBookCatalog.Models;
 
@@ -6,11 +7,15 @@ internal sealed record class BookMetadata
 {
     [JsonPropertyName("authors")]
     [JsonRequired]
-    public required string[] Authors { get; init; }
+    public required IReadOnlyList<string> Authors { get; init; }
 
-    [JsonPropertyName("isbn")]
+    [JsonPropertyName("isbn10")]
     [JsonRequired]
-    public required string ISBN { get; init; }
+    public string? ISBN10 { get; init; }
+
+    [JsonPropertyName("isbn13")]
+    [JsonRequired]
+    public string? ISBN13 { get; init; }
 
     [JsonPropertyName("publishedYear")]
     [JsonRequired]
